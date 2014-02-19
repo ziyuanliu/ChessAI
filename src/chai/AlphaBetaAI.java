@@ -1,0 +1,225 @@
+package chai;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Random;
+
+import chesspresso.Chess;
+import chesspresso.game.Game;
+import chesspresso.move.IllegalMoveException;
+import chesspresso.move.Move;
+import chesspresso.pgn.PGNReader;
+import chesspresso.position.Position;
+
+public class AlphaBetaAI implements ChessAI {
+	
+	HashMap<Position,TransNode> transTable;
+	ArrayList<Game> openingBook;
+	int maxDepth;
+	int moveCtr;
+	int color;
+	
+	public AlphaBetaAI(int depth){
+		this.maxDepth = depth;
+		transTable = new HashMap<Position,TransNode>();
+		openingBook = new ArrayList<Game>();
+		readOpening();
+		moveCtr = 0; 
+	}
+	
+	public void readOpening(){
+		File f;
+		try {
+//			URL url = this.getClass().getResource("book.pgn");
+			f = new File("book.pgn");
+			FileInputStream fis = new FileInputStream(f);
+			PGNReader pgnReader = new PGNReader(fis, "book.pgn");
+
+			//hack: we know there are only 120 games in the opening book
+			for (int i = 0; i < 120; i++)  {
+			  Game g = pgnReader.parseGame();
+			  g.gotoStart();
+			  openingBook.add(g); 
+			}
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
+	public short getMove(Position position) {
+		this.color = position.getToPlay();
+		try{
+			if(moveCtr<1){ 
+				moveCtr++;
+				System.out.println("begin");
+				Game g = openingBook.get(new Random().nextInt(openingBook.size()));
+				Position currentPos = g.getPosition();
+			    while (currentPos.getToPlay()!=this.color){
+			    	g.goForward();
+			    	currentPos = g.getPosition();
+			    }
+				return g.getNextMove().getShortMoveDesc();
+			}
+			
+			ChessMove move = maxVal(position, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+			System.out.println("Move picked is "+move);
+			moveCtr++;
+			return move.move;
+		}catch (Exception e){
+			System.out.println("Problem is "+e.toString());
+			return (short)0;
+		}
+		
+	}
+	
+	public ChessMove maxVal(Position pos, int maxDepth, int alpha, int beta){
+		if(transTable.containsKey(pos)&&maxDepth==transTable.get(pos).depth){
+			TransNode tempNode = transTable.get(pos);
+			return new ChessMove(tempNode.value-1,(short) 0);
+		}
+		
+		if(pos.isTerminal()||maxDepth==0){
+			int val = utilHelper(pos);
+			TransNode tempNode = new TransNode(val,maxDepth);
+			transTable.put(pos, tempNode);
+			return new ChessMove(val,(short) 0);
+		}
+
+		ChessMove retval = new ChessMove(Integer.MIN_VALUE, (short) 0);
+		for (short move: pos.getAllMoves()){
+			try {
+				pos.doMove(move);
+				ChessMove tempMove = minVal(pos, maxDepth-1, alpha, beta);
+
+				if (tempMove.val>retval.val){
+//					System.out.println("new max val "+tempMove+" "+move);
+					retval.setVal(tempMove.val);
+					retval.setMove(move);
+				}
+				pos.undoMove();
+				
+				if (retval.val>=beta){
+					TransNode tempNode = new TransNode(retval.val,maxDepth);
+					transTable.put(pos, tempNode);
+					return retval;
+				}
+				
+				alpha = Math.max(retval.val, alpha);
+			} catch (IllegalMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		TransNode tempNode = new TransNode(retval.val,maxDepth);
+		transTable.put(pos, tempNode);
+		return retval;
+	}
+	
+	public ChessMove minVal(Position pos, int maxDepth,int alpha, int beta){
+		
+		if(transTable.containsKey(pos)&&maxDepth==transTable.get(pos).depth){
+			TransNode tempNode = transTable.get(pos);
+			return new ChessMove(tempNode.value-1,(short) 0);
+		}
+		
+		if(pos.isTerminal()||maxDepth==0){
+			int val = utilHelper(pos);
+			TransNode tempNode = new TransNode(val,maxDepth);
+			transTable.put(pos, tempNode);
+			return new ChessMove(val,(short) 0);
+		}
+		
+		ChessMove retval = new ChessMove(Integer.MAX_VALUE, (short) 0);
+		for (short move: pos.getAllMoves()){
+			try {
+				pos.doMove(move);
+				ChessMove tempMove = maxVal(pos, maxDepth-1, alpha, beta);
+				
+				if (tempMove.val<retval.val){
+					retval.setVal(tempMove.val);
+					retval.setMove(move);
+				}
+				
+				pos.undoMove();
+				
+				if (retval.val<=alpha){
+					TransNode tempNode = new TransNode(retval.val,maxDepth);
+					transTable.put(pos, tempNode);
+					return retval;
+				}
+				
+				beta = Math.max(retval.val, beta);
+
+			} catch (IllegalMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		
+		TransNode tempNode = new TransNode(retval.val,maxDepth);
+		transTable.put(pos, tempNode);
+		return retval;
+	}
+	
+	public int utilHelper(Position pos){
+		if(pos.isMate()){
+			if(this.color==pos.getToPlay()){
+				return Integer.MIN_VALUE;
+			}else{
+				return Integer.MAX_VALUE;
+			}
+		}else if (pos.isStaleMate()){
+			return 0;
+		}else{
+			if(this.color==pos.getToPlay()){
+				return pos.getMaterial();
+			}else{
+				return -1*pos.getMaterial();
+			}
+		}
+	}
+
+	private class ChessMove{
+		int val;
+		short move;
+		private ChessMove(int val, short move){
+			this.val = val;
+			this.move = move;
+		}
+		
+		public void setVal(int val){
+			this.val = val;
+		}
+		
+		public void setMove(short move){
+			this.move = move;
+		}
+		
+		public String toString(){
+			return "value "+val+" move "+move;
+		}
+	}
+	
+	private class TransNode{
+		int value; 
+		int depth;
+		
+		private TransNode(int val, int dep){
+			this.value = val;
+			this.depth = dep;
+		}
+		
+		public void setVal(int val){
+			this.value = val;
+		}
+		
+		public void setDepth(int dep){
+			this.depth = dep;
+		}
+	}
+}
