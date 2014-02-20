@@ -13,26 +13,21 @@ import chesspresso.move.Move;
 import chesspresso.pgn.PGNReader;
 import chesspresso.position.Position;
 
-public class AlphaBetaAI implements ChessAI {
-	
-	HashMap<Integer,TransNode> transTable;
+public class AlphaBetaAI extends ColorChessAI {
 	ArrayList<Game> openingBook;
 	int maxDepth;
 	int moveCtr;
-	int color;
 	
 	public AlphaBetaAI(int depth){
-		this.maxDepth = depth;
-		transTable = new HashMap<Integer,TransNode>();
+		super(depth);
 		openingBook = new ArrayList<Game>();
 		readOpening();
-		moveCtr = 1; 
+		moveCtr = 0; 
 	}
 	
 	public void readOpening(){
 		File f;
 		try {
-//			URL url = this.getClass().getResource("book.pgn");
 			f = new File("book.pgn");
 			FileInputStream fis = new FileInputStream(f);
 			PGNReader pgnReader = new PGNReader(fis, "book.pgn");
@@ -192,42 +187,4 @@ public class AlphaBetaAI implements ChessAI {
 		}
 	}
 
-	private class ChessMove{
-		int val;
-		short move;
-		private ChessMove(int val, short move){
-			this.val = val;
-			this.move = move;
-		}
-		
-		public void setVal(int val){
-			this.val = val;
-		}
-		
-		public void setMove(short move){
-			this.move = move;
-		}
-		
-		public String toString(){
-			return "value "+val+" move "+move;
-		}
-	}
-	
-	private class TransNode{
-		int value; 
-		int depth;
-		
-		private TransNode(int val, int dep){
-			this.value = val;
-			this.depth = dep;
-		}
-		
-		public void setVal(int val){
-			this.value = val;
-		}
-		
-		public void setDepth(int dep){
-			this.depth = dep;
-		}
-	}
 }

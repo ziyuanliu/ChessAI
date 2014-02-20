@@ -1,16 +1,24 @@
 package chai;
 
+import java.util.Random;
 
-import chesspresso.Chess;
+import chai.ColorChessAI.ChessMove;
+import chai.ColorChessAI.TransNode;
 import chesspresso.move.IllegalMoveException;
 import chesspresso.position.Position;
 
-public class MiniMaxAI implements ChessAI {
+public class MiniMaxAI extends ColorChessAI {
 	
+	public MiniMaxAI(int d) {
+		super(d);
+		// TODO Auto-generated constructor stub
+	}
+
 	public short getMove(Position position) {
-		ChessMove move = maxVal(position,1);
-		for(int i = 1; i < 6; i ++){
-			ChessMove temp = maxVal(position,i);
+		this.color = position.getToPlay();
+		ChessMove move = minimax(position, 1, color==position.getToPlay());
+		for(int i = 1; i < this.maxDepth; i ++){
+			ChessMove temp = minimax(position,i,color==position.getToPlay());
 			if (move.val < temp.val){
 				move = temp;
 			}
@@ -18,23 +26,40 @@ public class MiniMaxAI implements ChessAI {
 		return move.move;
 	}
 	
-	public ChessMove maxVal(Position pos, int maxDepth){
-
-		if(pos.isTerminal()||maxDepth==0){
-			return new ChessMove(utilHelper(pos),(short) 0);
+	public ChessMove minimax(Position pos, int maxDepth, boolean isMx){
+		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
+			TransNode tempNode = transTable.get(pos.hashCode());
+			return new ChessMove(tempNode.value-1,(short) 0);
 		}
-
-		ChessMove retval = new ChessMove(Integer.MIN_VALUE, (short) 0);
 		
+		if (maxDepth == 0 || pos.isTerminal()){
+			int val = isMx ? utilHelper(pos) : -1*utilHelper(pos);
+			TransNode tempNode = new TransNode(val,maxDepth);
+			transTable.put(pos.hashCode(), tempNode);
+			return new ChessMove(val, (short) 0);
+		}
+		
+		boolean isMaximizing = this.color==pos.getToPlay();
+		
+		ChessMove retval = new ChessMove(isMaximizing ? 1 * Integer.MIN_VALUE : Integer.MAX_VALUE, (short) 0);
+			
 		for (short move: pos.getAllMoves()){
 			try {
 				pos.doMove(move);
-				ChessMove tempMove = minVal(pos, maxDepth-1);
+				ChessMove tempMove = minimax(pos, maxDepth-1, !isMaximizing);
 
-				if (tempMove.val>retval.val){
-					retval.setVal(tempMove.val);
-					retval.setMove(move);
+				if(isMx){
+					if (tempMove.val>retval.val){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+					}
+				}else{
+					if (tempMove.val<retval.val){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+					}
 				}
+				
 				pos.undoMove();
 			} catch (IllegalMoveException e) {
 				// TODO Auto-generated catch block
@@ -42,71 +67,21 @@ public class MiniMaxAI implements ChessAI {
 			}
 			
 		}
+//		TransNode tempNode = new TransNode(retval.val,maxDepth);
+//		transTable.put(pos.hashCode(), tempNode);
 		return retval;
 	}
 	
-	public ChessMove minVal(Position pos, int maxDepth){
-//		System.out.println("min "+maxDepth);
-		if(pos.isTerminal()||maxDepth==0){
-			return new ChessMove(utilHelper(pos),(short) 0);
-		}
-		ChessMove retval = new ChessMove(Integer.MAX_VALUE, (short) 0);
-		for (short move: pos.getAllMoves()){
-			try {
-				pos.doMove(move);
-				ChessMove tempMove = maxVal(pos, maxDepth-1);
-				if (tempMove.val<retval.val){
-					retval.setVal(tempMove.val);
-					retval.setMove(move);
-				}
-				pos.undoMove();
-			} catch (IllegalMoveException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-		}
-		return retval;
-	}
 	
 	public int utilHelper(Position pos){
 		if(pos.isStaleMate()){
 			return 0;
 		}
-		
-		if(pos.isMate()){ 
-			if(pos.getToPlay()==Chess.WHITE){
-				return Integer.MIN_VALUE;
-			}else{
-				return Integer.MAX_VALUE;
-			} 
-		}else{
-			if(pos.getToPlay()==Chess.WHITE){
-				return pos.getMaterial();
-			}else{
-				return -1*pos.getMaterial();
-			}
-		}
-	}
-
-	private class ChessMove{
-		int val;
-		short move;
-		private ChessMove(int val, short move){
-			this.val = val;
-			this.move = move;
+		if(pos.isMate()){
+			return Integer.MIN_VALUE;
 		}
 		
-		public void setVal(int val){
-			this.val = val;
-		}
-		
-		public void setMove(short move){
-			this.move = move;
-		}
-		
-		public String toString(){
-			return "value "+val+" move "+move;
-		}
+		return (new Random()).nextInt();
+//		return (int) (pos.getMaterial()+pos.getDomination());
 	}
 }
