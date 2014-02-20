@@ -1,9 +1,5 @@
 package chai;
 
-import java.util.Random;
-
-import chai.ColorChessAI.ChessMove;
-import chai.ColorChessAI.TransNode;
 import chesspresso.move.IllegalMoveException;
 import chesspresso.position.Position;
 
@@ -81,7 +77,7 @@ public class MiniMaxAI extends ColorChessAI {
 			return Integer.MIN_VALUE;
 		}
 		
-		return (new Random()).nextInt();
-//		return (int) (pos.getMaterial()+pos.getDomination());
+//		return (new Random()).nextInt();
+		return (int) (pos.getMaterial()+pos.getDomination()/2);
 	}
 }
