@@ -8,7 +8,13 @@ import chesspresso.position.Position;
 public class MiniMaxAI implements ChessAI {
 	
 	public short getMove(Position position) {
-		ChessMove move = maxVal(position,6);
+		ChessMove move = maxVal(position,1);
+		for(int i = 1; i < 6; i ++){
+			ChessMove temp = maxVal(position,i);
+			if (move.val < temp.val){
+				move = temp;
+			}
+		}
 		return move.move;
 	}
 	

@@ -26,7 +26,7 @@ public class AlphaBetaAI implements ChessAI {
 		transTable = new HashMap<Integer,TransNode>();
 		openingBook = new ArrayList<Game>();
 		readOpening();
-		moveCtr = 0; 
+		moveCtr = 1; 
 	}
 	
 	public void readOpening(){
