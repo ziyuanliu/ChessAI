@@ -104,7 +104,7 @@ public class AlphaBetaAI implements ChessAI {
 				}
 				pos.undoMove();
 				
-				if (retval.val>beta){
+				if (retval.val>=beta){
 					TransNode tempNode = new TransNode(retval.val,maxDepth);
 					transTable.put(pos.hashCode(), tempNode);
 					return retval;
@@ -185,9 +185,9 @@ public class AlphaBetaAI implements ChessAI {
 			return 0;
 		}else{
 			if(this.color==pos.getToPlay()){
-				return (int) (pos.getMaterial()+pos.getDomination()/2);
+				return (int) (pos.getMaterial()+pos.getDomination()/5);
 			}else{
-				return (int) (-1*(pos.getMaterial()+pos.getDomination()/2));
+				return (int) (-1*(pos.getMaterial()+pos.getDomination()/5));
 			}
 		}
 	}
