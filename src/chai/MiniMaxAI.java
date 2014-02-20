@@ -1,17 +1,18 @@
 package chai;
 
+
 import chesspresso.Chess;
 import chesspresso.move.IllegalMoveException;
 import chesspresso.position.Position;
 
 public class MiniMaxAI implements ChessAI {
+	
 	public short getMove(Position position) {
 		ChessMove move = maxVal(position,6);
 		return move.move;
 	}
 	
 	public ChessMove maxVal(Position pos, int maxDepth){
-//		System.out.println("max "+maxDepth);
 
 		if(pos.isTerminal()||maxDepth==0){
 			return new ChessMove(utilHelper(pos),(short) 0);

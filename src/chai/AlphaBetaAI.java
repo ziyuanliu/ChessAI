@@ -15,7 +15,7 @@ import chesspresso.position.Position;
 
 public class AlphaBetaAI implements ChessAI {
 	
-	HashMap<Position,TransNode> transTable;
+	HashMap<Integer,TransNode> transTable;
 	ArrayList<Game> openingBook;
 	int maxDepth;
 	int moveCtr;
@@ -23,7 +23,7 @@ public class AlphaBetaAI implements ChessAI {
 	
 	public AlphaBetaAI(int depth){
 		this.maxDepth = depth;
-		transTable = new HashMap<Position,TransNode>();
+		transTable = new HashMap<Integer,TransNode>();
 		openingBook = new ArrayList<Game>();
 		readOpening();
 		moveCtr = 0; 
@@ -51,6 +51,7 @@ public class AlphaBetaAI implements ChessAI {
 	
 	public short getMove(Position position) {
 		this.color = position.getToPlay();
+		
 		try{
 			if(moveCtr<1){ 
 				moveCtr++;
@@ -69,22 +70,22 @@ public class AlphaBetaAI implements ChessAI {
 			moveCtr++;
 			return move.move;
 		}catch (Exception e){
-			System.out.println("Problem is "+e.toString());
+			e.printStackTrace();
 			return (short)0;
 		}
 		
 	}
 	
 	public ChessMove maxVal(Position pos, int maxDepth, int alpha, int beta){
-		if(transTable.containsKey(pos)&&maxDepth==transTable.get(pos).depth){
-			TransNode tempNode = transTable.get(pos);
-			return new ChessMove(tempNode.value-1,(short) 0);
+		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
+			TransNode tempNode = transTable.get(pos.hashCode());
+			return new ChessMove(tempNode.value,(short) 0);
 		}
 		
 		if(pos.isTerminal()||maxDepth==0){
 			int val = utilHelper(pos);
 			TransNode tempNode = new TransNode(val,maxDepth);
-			transTable.put(pos, tempNode);
+			transTable.put(pos.hashCode(), tempNode);
 			return new ChessMove(val,(short) 0);
 		}
 
@@ -93,7 +94,9 @@ public class AlphaBetaAI implements ChessAI {
 			try {
 				pos.doMove(move);
 				ChessMove tempMove = minVal(pos, maxDepth-1, alpha, beta);
-
+				if(Move.isPromotion(move)){
+					tempMove.val = Integer.MAX_VALUE-1;
+				}
 				if (tempMove.val>retval.val){
 //					System.out.println("new max val "+tempMove+" "+move);
 					retval.setVal(tempMove.val);
@@ -101,9 +104,9 @@ public class AlphaBetaAI implements ChessAI {
 				}
 				pos.undoMove();
 				
-				if (retval.val>=beta){
+				if (retval.val>beta){
 					TransNode tempNode = new TransNode(retval.val,maxDepth);
-					transTable.put(pos, tempNode);
+					transTable.put(pos.hashCode(), tempNode);
 					return retval;
 				}
 				
@@ -115,21 +118,21 @@ public class AlphaBetaAI implements ChessAI {
 			
 		}
 		TransNode tempNode = new TransNode(retval.val,maxDepth);
-		transTable.put(pos, tempNode);
+		transTable.put(pos.hashCode(), tempNode);
 		return retval;
 	}
 	
 	public ChessMove minVal(Position pos, int maxDepth,int alpha, int beta){
 		
-		if(transTable.containsKey(pos)&&maxDepth==transTable.get(pos).depth){
-			TransNode tempNode = transTable.get(pos);
-			return new ChessMove(tempNode.value-1,(short) 0);
+		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
+			TransNode tempNode = transTable.get(pos.hashCode());
+			return new ChessMove(tempNode.value,(short) 0);
 		}
 		
 		if(pos.isTerminal()||maxDepth==0){
 			int val = utilHelper(pos);
 			TransNode tempNode = new TransNode(val,maxDepth);
-			transTable.put(pos, tempNode);
+			transTable.put(pos.hashCode(), tempNode);
 			return new ChessMove(val,(short) 0);
 		}
 		
@@ -138,6 +141,10 @@ public class AlphaBetaAI implements ChessAI {
 			try {
 				pos.doMove(move);
 				ChessMove tempMove = maxVal(pos, maxDepth-1, alpha, beta);
+				if(Move.isPromotion(move)){
+					tempMove.val = Integer.MIN_VALUE+1;
+				}
+				
 				
 				if (tempMove.val<retval.val){
 					retval.setVal(tempMove.val);
@@ -148,11 +155,11 @@ public class AlphaBetaAI implements ChessAI {
 				
 				if (retval.val<=alpha){
 					TransNode tempNode = new TransNode(retval.val,maxDepth);
-					transTable.put(pos, tempNode);
+					transTable.put(pos.hashCode(), tempNode);
 					return retval;
 				}
 				
-				beta = Math.max(retval.val, beta);
+				beta = Math.min(retval.val, beta);
 
 			} catch (IllegalMoveException e) {
 				// TODO Auto-generated catch block
@@ -162,11 +169,12 @@ public class AlphaBetaAI implements ChessAI {
 		}
 		
 		TransNode tempNode = new TransNode(retval.val,maxDepth);
-		transTable.put(pos, tempNode);
+		transTable.put(pos.hashCode(), tempNode);
 		return retval;
 	}
 	
 	public int utilHelper(Position pos){
+		
 		if(pos.isMate()){
 			if(this.color==pos.getToPlay()){
 				return Integer.MIN_VALUE;
@@ -177,9 +185,9 @@ public class AlphaBetaAI implements ChessAI {
 			return 0;
 		}else{
 			if(this.color==pos.getToPlay()){
-				return pos.getMaterial();
+				return (int) (pos.getMaterial()+pos.getDomination()/2);
 			}else{
-				return -1*pos.getMaterial();
+				return (int) (-1*(pos.getMaterial()+pos.getDomination()/2));
 			}
 		}
 	}
