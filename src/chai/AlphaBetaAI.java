@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
+import chai.ColorChessAI.ChessMove;
+import chai.ColorChessAI.TransNode;
 import chesspresso.Chess;
 import chesspresso.game.Game;
 import chesspresso.move.IllegalMoveException;
@@ -15,7 +17,6 @@ import chesspresso.position.Position;
 
 public class AlphaBetaAI extends ColorChessAI {
 	ArrayList<Game> openingBook;
-	int maxDepth;
 	int moveCtr;
 	
 	public AlphaBetaAI(int depth){
@@ -60,7 +61,7 @@ public class AlphaBetaAI extends ColorChessAI {
 				return g.getNextMove().getShortMoveDesc();
 			}
 			
-			ChessMove move = maxVal(position, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+			ChessMove move = alphabeta(position, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE, this.color==position.getToPlay());
 			System.out.println("Move picked is "+move);
 			moveCtr++;
 			return move.move;
@@ -71,6 +72,68 @@ public class AlphaBetaAI extends ColorChessAI {
 		
 	}
 	
+	public ChessMove alphabeta(Position pos, int maxDepth, int alpha, int beta, boolean isMaximizing){
+		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
+			TransNode tempNode = transTable.get(pos.hashCode());
+			return new ChessMove(tempNode.value-1,(short) 0);
+		}
+		
+		if (maxDepth == 0 || pos.isTerminal()){
+			int val = isMaximizing ? utilHelper(pos) : -1*utilHelper(pos);
+			TransNode tempNode = new TransNode(val,maxDepth);
+			transTable.put(pos.hashCode(), tempNode);
+			return new ChessMove(val, (short) 0);
+		}
+		
+		ChessMove retval = new ChessMove(isMaximizing ? 1 * Integer.MIN_VALUE : Integer.MAX_VALUE, (short) 0);
+			
+		for (short move: pos.getAllMoves()){
+			try {
+				pos.doMove(move);
+				
+				if(isMaximizing){
+					ChessMove tempMove = alphabeta(pos, maxDepth-1, alpha, beta, false);
+					alpha = Math.max(alpha, tempMove.val);
+//					System.out.println("maximizing "+alpha+" "+beta+" "+tempMove.val);
+					pos.undoMove();
+					
+					if (tempMove.val>retval.val){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+					}
+					
+					if(beta<=alpha){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+						break;
+					}
+
+				}else{
+					ChessMove tempMove = alphabeta(pos, maxDepth-1, alpha, beta, true);
+					beta = Math.min(beta, tempMove.val);
+					pos.undoMove();
+					
+					if (tempMove.val<retval.val){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+					}
+					
+					if(beta<=alpha){
+						retval.setVal(tempMove.val);
+						retval.setMove(move);
+						break;
+					}
+
+				}
+				
+				
+			} catch (IllegalMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return retval;
+	}
 	public ChessMove maxVal(Position pos, int maxDepth, int alpha, int beta){
 		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
 			TransNode tempNode = transTable.get(pos.hashCode());
@@ -169,22 +232,14 @@ public class AlphaBetaAI extends ColorChessAI {
 	}
 	
 	public int utilHelper(Position pos){
-		
-		if(pos.isMate()){
-			if(this.color==pos.getToPlay()){
-				return Integer.MIN_VALUE;
-			}else{
-				return Integer.MAX_VALUE;
-			}
-		}else if (pos.isStaleMate()){
+		if(pos.isStaleMate()){
 			return 0;
-		}else{
-			if(this.color==pos.getToPlay()){
-				return (int) (pos.getMaterial()+pos.getDomination()/5);
-			}else{
-				return (int) (-1*(pos.getMaterial()+pos.getDomination()/5));
-			}
 		}
+		if(pos.isMate()){
+			return Integer.MIN_VALUE;
+		}
+		
+		return (int) (pos.getMaterial()+pos.getDomination()/2);
 	}
 
 }

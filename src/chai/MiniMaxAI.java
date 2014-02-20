@@ -22,20 +22,19 @@ public class MiniMaxAI extends ColorChessAI {
 		return move.move;
 	}
 	
-	public ChessMove minimax(Position pos, int maxDepth, boolean isMx){
+	public ChessMove minimax(Position pos, int maxDepth, boolean isMaximizing){
 		if(transTable.containsKey(pos.hashCode())&&maxDepth<transTable.get(pos.hashCode()).depth){
 			TransNode tempNode = transTable.get(pos.hashCode());
 			return new ChessMove(tempNode.value-1,(short) 0);
 		}
 		
 		if (maxDepth == 0 || pos.isTerminal()){
-			int val = isMx ? utilHelper(pos) : -1*utilHelper(pos);
+			int val = isMaximizing ? utilHelper(pos) : -1*utilHelper(pos);
 			TransNode tempNode = new TransNode(val,maxDepth);
 			transTable.put(pos.hashCode(), tempNode);
 			return new ChessMove(val, (short) 0);
 		}
 		
-		boolean isMaximizing = this.color==pos.getToPlay();
 		
 		ChessMove retval = new ChessMove(isMaximizing ? 1 * Integer.MIN_VALUE : Integer.MAX_VALUE, (short) 0);
 			
@@ -44,7 +43,7 @@ public class MiniMaxAI extends ColorChessAI {
 				pos.doMove(move);
 				ChessMove tempMove = minimax(pos, maxDepth-1, !isMaximizing);
 
-				if(isMx){
+				if(isMaximizing){
 					if (tempMove.val>retval.val){
 						retval.setVal(tempMove.val);
 						retval.setMove(move);
